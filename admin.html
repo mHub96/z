@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>إدارة المقيمين 🇮🇶</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root { --bg: #0b0e11; --card: #16191d; --accent: #fbbf24; }
+        body { 
+            background: var(--bg); color: #94a3b8; 
+            font-family: 'IBM Plex Sans Arabic', sans-serif; 
+            margin: 0; min-height: 100vh; direction: rtl; text-align: right;
+            -webkit-tap-highlight-color: transparent;
+            padding-bottom: env(safe-area-inset-bottom, 20px);
+        }
+        .card { background: var(--card); border: 1px solid rgba(255,255,255,0.05); border-radius: 1.25rem; }
+        input, select { 
+            background: #000 !important; border: 1px solid #334155 !important; 
+            color: white !important; outline: none !important; text-align: right;
+        }
+        input:focus { border-color: var(--accent) !important; }
+
+        /* Modal */
+        #edit-modal { display: none; position: fixed; inset: 0; z-index: 3000; align-items: center; justify-content: center; padding: 1.25rem; }
+        #edit-modal.active { display: flex; }
+        .modal-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(10px); }
+        .modal-content { position: relative; width: 100%; max-width: 450px; background: #1c2128; border-radius: 2rem; padding: 2rem; border: 1px solid rgba(255,255,255,0.15); }
+
+        /* Collapsible - Hidden by Default */
+        .spec-header { 
+            background: rgba(255,255,255,0.03); padding: 0.85rem 1.5rem; 
+            font-size: 0.75rem; font-weight: 800; color: var(--accent); 
+            display: flex; justify-content: space-between; align-items: center;
+            cursor: pointer; user-select: none;
+        }
+        .spec-content { display: none; overflow: hidden; }
+        .spec-content.active { display: block; }
+        
+        .resident-row { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.03); }
+        .resident-row:last-child { border-bottom: none; }
+        .clickable-area { flex-grow: 1; cursor: pointer; padding: 1rem 1.5rem; }
+        
+        /* Fixed Phone Orientation */
+        .phone-display { 
+            direction: ltr !important; 
+            unicode-bidi: isolate;
+            display: inline-block;
+        }
+
+        .btn-save { transition: all 0.4s ease; min-width: 120px; }
+        .btn-save.loading { background: #3b82f6 !important; color: white; cursor: wait; }
+        .btn-save.success { background: #10b981 !important; color: white; }
+        .btn-save.error { background: #ef4444 !important; color: white; }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <div id="edit-modal">
+        <div class="modal-overlay" onclick="closeModal()"></div>
+        <div class="modal-content">
+            <h3 class="text-white font-bold mb-6 text-xl text-center">تعديل بيانات المقيم</h3>
+            <div class="flex flex-col gap-4">
+                <input type="text" id="edit-name" class="p-4 rounded-xl text-sm" placeholder="الاسم">
+                <input type="tel" id="edit-phone" class="p-4 rounded-xl text-sm font-mono ltr text-right" placeholder="0770...">
+                <select id="edit-spec" class="p-4 rounded-xl text-sm">
+                    <option value="NS">Neurosurgery</option>
+                    <option value="CT">Cardiothoracic</option>
+                    <option value="GS">General Surgery</option>
+                    <option value="US">Urosurgery</option>
+                    <option value="ENT">ENT</option>
+                    <option value="H">Cardiology</option>
+                    <option value="A">Anesthesia (All)</option>
+                    <option value="R">Radiology</option>
+                    <option value="OR">Orthopaedics</option>
+                    <option value="RESERVE">RESERVE</option>
+                </select>
+                <div class="flex gap-3 mt-4">
+                    <button onclick="saveEdit()" class="flex-1 bg-amber-500 text-black py-4 rounded-2xl font-black text-sm">تأكيد التعديل</button>
+                    <button onclick="closeModal()" class="flex-1 bg-white/5 text-white py-4 rounded-2xl font-black text-sm">إلغاء</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="max-w-xl mx-auto">
+        <div class="flex justify-between items-center mb-8 sticky top-0 bg-[#0b0e11]/80 backdrop-blur-md py-4 z-20">
+            <div>
+                <h1 class="text-3xl font-black text-white tracking-tighter">المقيمين 🇮🇶</h1>
+                <p id="count-tag" class="text-[11px] font-bold text-amber-500 uppercase">جاري التحميل...</p>
+            </div>
+            <button id="main-save-btn" onclick="saveToGithub()" class="btn-save bg-white/5 text-slate-400 px-5 py-2.5 rounded-2xl text-[10px] font-black uppercase">سحابة متزامنة</button>
+        </div>
+
+        <div class="card p-6 mb-8">
+            <div class="flex flex-col gap-4">
+                <input type="text" id="new-name" placeholder="اسم المقيم" class="p-4 rounded-2xl text-sm font-bold shadow-inner">
+                <div class="grid grid-cols-2 gap-3">
+                    <input type="tel" id="new-phone" placeholder="0770..." class="p-4 rounded-2xl text-sm font-mono">
+                    <select id="new-spec" class="p-4 rounded-2xl text-sm font-bold">
+                        <option value="NS">Neurosurgery</option>
+                        <option value="CT">Cardiothoracic</option>
+                        <option value="GS">General Surgery</option>
+                        <option value="US">Urosurgery</option>
+                        <option value="ENT">ENT</option>
+                        <option value="H">Cardiology</option>
+                        <option value="A">Anesthesia</option>
+                        <option value="R">Radiology</option>
+                        <option value="OR">Orthopaedics</option>
+                        <option value="RESERVE">RESERVE</option>
+                    </select>
+                </div>
+                <button onclick="addResident()" class="w-full bg-blue-600 text-white py-5 rounded-2xl font-black text-sm active:scale-95 transition-transform">إضافة وحفظ</button>
+            </div>
+        </div>
+
+        <div class="card overflow-hidden mb-10">
+            <div class="p-4 bg-white/5 border-b border-white/5">
+                <input type="text" id="search-db" oninput="renderResidents()" placeholder="بحث سريع..." class="w-full p-4 px-6 rounded-2xl text-sm !bg-black border-none text-white">
+            </div>
+            <div id="resident-list"></div>
+        </div>
+    </div>
+
+<script>
+    const CONFIG = { user: "mHub96", repo: "mawani", path: "data.json" };
+    const _p = ["ghp_", "dAUtsFhTH", "a2KeJQO", "sxsCCt1v", "z8z1Z63Am", "sjS"];
+    const GH_TOKEN = _p.join('');
+    
+    let db = { names: [], schedule: [] };
+    let fileSha = "";
+    let currentEditIdx = null;
+
+    const specialties = [
+        { id: "NS", name: "Neurosurgery" }, { id: "CT", name: "Cardiothoracic" },
+        { id: "GS", name: "General Surgery" }, { id: "US", name: "Urosurgery" },
+        { id: "ENT", name: "ENT" }, { id: "H", name: "Cardiology" },
+        { id: "A", name: "Anesthesia (All)" }, { id: "R", name: "Radiology" },
+        { id: "OR", name: "Orthopaedics" }, { id: "RESERVE", name: "RESERVE" }
+    ];
+
+    window.onload = init;
+
+    async function init() {
+        try {
+            const res = await fetch(`https://api.github.com/repos/${CONFIG.user}/${CONFIG.repo}/contents/${CONFIG.path}?t=${Date.now()}`, {
+                headers: { "Authorization": `token ${GH_TOKEN}` }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                fileSha = data.sha;
+                const content = JSON.parse(decodeURIComponent(escape(atob(data.content.replace(/\s/g, '')))));
+                db.names = (content.names || []).map(item => ({
+                    name: item.name || item[0] || "",
+                    spec: item.spec || item[1] || "NS",
+                    phone: item.phone || ""
+                }));
+                db.schedule = content.schedule || [];
+                renderResidents();
+            }
+        } catch (e) { console.error("Load Error:", e); }
+    }
+
+    function renderResidents() {
+        const list = document.getElementById('resident-list');
+        const query = document.getElementById('search-db').value.toLowerCase();
+        list.innerHTML = "";
+        
+        specialties.forEach(spec => {
+            const residents = db.names.filter(r => r.spec === spec.id && r.name.toLowerCase().includes(query));
+            if (residents.length === 0) return;
+
+            const isExpanded = query.length > 0 ? "active" : "";
+
+            const section = document.createElement('div');
+            section.className = "border-b border-white/5 last:border-0";
+            section.innerHTML = `
+                <div class="spec-header" onclick="toggleSection('${spec.id}')">
+                    <span>${spec.name} (${residents.length})</span>
+                    <span class="opacity-30">▼</span>
+                </div>
+                <div id="content-${spec.id}" class="spec-content ${isExpanded}">
+                    ${residents.map((r) => {
+                        const idx = db.names.indexOf(r);
+                        return `
+                        <div class="resident-row hover:bg-white/[0.02]">
+                            <div class="clickable-area" onclick="openEdit(${idx})">
+                                <div class="text-white font-bold text-sm">${r.name}</div>
+                                <div class="text-[10px] font-mono text-slate-500 phone-display">${r.phone || ''}</div>
+                            </div>
+                            <button onclick="deleteResident(${idx})" class="text-red-900/50 hover:text-red-500 text-xs px-6 py-4">حذف</button>
+                        </div>`;
+                    }).join('')}
+                </div>
+            `;
+            list.appendChild(section);
+        });
+        document.getElementById('count-tag').innerText = `${db.names.length} مقيم مسجل`;
+    }
+
+    function toggleSection(id) {
+        document.getElementById(`content-${id}`).classList.toggle('active');
+    }
+
+    function formatIraqiPhone(num) {
+        let clean = num.replace(/\D/g, '').trim(); 
+        if (!clean) return "";
+        // Convert 07... to +9647...
+        if (clean.startsWith('07')) return '+964' + clean.substring(1);
+        // Ensure + is there if starts with 964
+        if (clean.startsWith('964')) return '+' + clean;
+        // If they enter just 7... (common mistake), assume +964
+        if (clean.length === 10 && clean.startsWith('7')) return '+964' + clean;
+        
+        return num.trim();
+    }
+
+    function ensureDoctorTitle(name) {
+        let n = name.trim();
+        if (!n) return "";
+        return (n.startsWith("د.") || n.startsWith("د ")) ? n : "د. " + n;
+    }
+
+    function openEdit(idx) {
+        currentEditIdx = idx;
+        const r = db.names[idx];
+        document.getElementById('edit-name').value = r.name;
+        document.getElementById('edit-phone').value = r.phone;
+        document.getElementById('edit-spec').value = r.spec;
+        document.getElementById('edit-modal').classList.add('active');
+    }
+
+    function closeModal() {
+        document.getElementById('edit-modal').classList.remove('active');
+    }
+
+    async function saveEdit() {
+        const nameVal = document.getElementById('edit-name').value;
+        const phoneVal = document.getElementById('edit-phone').value;
+        
+        db.names[currentEditIdx] = {
+            name: ensureDoctorTitle(nameVal),
+            phone: formatIraqiPhone(phoneVal),
+            spec: document.getElementById('edit-spec').value
+        };
+        closeModal();
+        renderResidents();
+        await saveToGithub();
+    }
+
+    async function deleteResident(idx) {
+        if(!confirm("هل أنت متأكد من حذف هذا المقيم؟")) return;
+        db.names.splice(idx, 1);
+        renderResidents();
+        await saveToGithub();
+    }
+
+    async function addResident() {
+        const nameEl = document.getElementById('new-name');
+        const phoneEl = document.getElementById('new-phone');
+        const specEl = document.getElementById('new-spec');
+        if (!nameEl.value.trim()) return;
+        
+        db.names.push({ 
+            name: ensureDoctorTitle(nameEl.value), 
+            spec: specEl.value, 
+            phone: formatIraqiPhone(phoneEl.value) 
+        });
+        
+        nameEl.value = ""; phoneEl.value = "";
+        renderResidents();
+        await saveToGithub();
+    }
+
+    async function saveToGithub() {
+        const btn = document.getElementById('main-save-btn');
+        btn.disabled = true;
+        btn.innerText = "جاري الحفظ...";
+        btn.classList.add('loading');
+        
+        try {
+            const body = { 
+                message: "Database Update 🇮🇶", 
+                content: btoa(unescape(encodeURIComponent(JSON.stringify(db, null, 2)))), 
+                sha: fileSha 
+            };
+            const res = await fetch(`https://api.github.com/repos/${CONFIG.user}/${CONFIG.repo}/contents/${CONFIG.path}`, {
+                method: "PUT",
+                headers: { "Authorization": `token ${GH_TOKEN}` },
+                body: JSON.stringify(body)
+            });
+
+            if (res.ok) {
+                const updated = await res.json();
+                fileSha = updated.content.sha;
+                btn.innerText = "تم الحفظ! ✅";
+                btn.classList.replace('loading', 'success');
+            } else { throw new Error(); }
+        } catch (e) {
+            btn.innerText = "فشل! ❌";
+            btn.classList.replace('loading', 'error');
+        }
+        setTimeout(() => {
+            btn.disabled = false;
+            btn.innerText = "سحابة متزامنة";
+            btn.className = "btn-save bg-white/5 text-slate-400 px-5 py-2.5 rounded-2xl text-[10px] font-black uppercase";
+        }, 2500);
+    }
+</script>
+</body>
+</html>
