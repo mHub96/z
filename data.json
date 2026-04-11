@@ -1,0 +1,27 @@
+{
+  "names": [
+    {
+      "name": "د. ORTHO",
+      "spec": "OR",
+      "phone": "+9647801234567"
+    },
+    {
+      "name": "د. ORTHO2",
+      "spec": "OR",
+      "phone": "+9647806594325"
+    },
+    {
+      "name": "د. Reserve01",
+      "spec": "RESERVE",
+      "phone": "+9647805496351"
+    }
+  ],
+  "schedule": [
+    {
+      "date": "11/04/2026",
+      "specCode": "OR",
+      "name": "د. ORTHO2",
+      "timestamp": "14:39"
+    }
+  ]
+}
