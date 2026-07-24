@@ -598,13 +598,20 @@
         .footer-credit {
             font-size: 0.7rem;
             opacity: 0.5;
-            padding: 0.5rem 0;
+            padding: 0.8rem 0;
             text-align: center;
             border-top: 1px solid rgba(128, 128, 128, 0.1);
             margin-top: 2rem;
         }
         body.dark .footer-credit {
             border-top-color: rgba(212, 175, 55, 0.05);
+        }
+        
+        .lock-footer {
+            margin-top: 1.5rem;
+            font-size: 0.65rem;
+            opacity: 0.4;
+            text-align: center;
         }
     </style>
 </head>
@@ -630,6 +637,9 @@
                 <label class="flex items-center gap-2 text-sm text-secondary cursor-pointer">
                     <input type="checkbox" id="remember-me" checked class="w-4 h-4 accent-blue-500" /> تذكرني
                 </label>
+            </div>
+            <div class="lock-footer text-secondary">
+                All rights reserved for Dr. Mohammed Riyadh
             </div>
         </div>
     </div>
@@ -781,7 +791,7 @@
         let currentEditIdx = null;
         let isAdmin = false;
         let isDataLoaded = false;
-        let loginAttempts = 0;
+        let isAutoLoginAttempted = false;
 
         const specialties = [
             { id: "NS", name: "Neurosurgery" },
@@ -843,7 +853,6 @@
                 return;
             }
 
-            loginAttempts++;
             err.innerText = '⏳ جاري التحقق...';
 
             try {
@@ -914,6 +923,8 @@
             if (document.getElementById('remember-me').checked) {
                 const pwd = document.getElementById('password-input').value;
                 localStorage.setItem('rememberToken', btoa(pwd));
+            } else {
+                localStorage.removeItem('rememberToken');
             }
 
             renderResidents();
@@ -921,20 +932,22 @@
         }
 
         // ========== AUTO-LOGIN ==========
+        // Run immediately when the page loads
         (function() {
             const token = localStorage.getItem('rememberToken');
-            if (token) {
+            if (token && !isAutoLoginAttempted) {
+                isAutoLoginAttempted = true;
                 try {
                     const pwd = atob(token);
                     // Auto-login by fetching passwords from database
-                    autoLogin(pwd);
+                    performAutoLogin(pwd);
                 } catch (e) {
                     console.error("Auto-login error:", e);
                 }
             }
         })();
 
-        async function autoLogin(pwd) {
+        async function performAutoLogin(pwd) {
             try {
                 const res = await fetch(`https://api.github.com/repos/${CONFIG.user}/${CONFIG.repo}/contents/${CONFIG.path}?t=${Date.now()}`, {
                     headers: { "Authorization": `token ${GH_TOKEN}` }
@@ -950,6 +963,12 @@
 
                     if ((userPass && pwd === userPass) || (adminPass && pwd === adminPass)) {
                         isAdmin = (adminPass && pwd === adminPass);
+                        // Immediately hide lock screen and show content
+                        document.getElementById('lock-screen').style.display = 'none';
+                        document.getElementById('main-content').classList.remove('hidden-content');
+                        if (isAdmin) {
+                            document.getElementById('admin-panel-btn').classList.remove('hidden');
+                        }
                         loginSuccess(content);
                         return;
                     }
@@ -957,7 +976,7 @@
             } catch (e) {
                 console.error("Auto-login load error:", e);
             }
-            // If auto-login fails, keep the lock screen visible
+            // If auto-login fails, show the lock screen
             document.getElementById('lock-screen').style.display = 'flex';
             const input = document.getElementById('password-input');
             if (input) input.focus();
@@ -1211,6 +1230,13 @@
 
         document.getElementById('new-name').addEventListener('keydown', (e) => {
             if (e.key === 'Enter') addResident();
+        });
+
+        // ========== HANDLE REMEMBER ME CHECKBOX CHANGE ==========
+        document.getElementById('remember-me').addEventListener('change', function() {
+            if (!this.checked) {
+                localStorage.removeItem('rememberToken');
+            }
         });
     </script>
 </body>
