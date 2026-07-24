@@ -24,9 +24,9 @@
     {
       "name": "د. علي محسن",
       "phone": "+9647756274144",
-      "spec": "RESERVE",
+      "spec": "NS",
       "tag": "NS",
-      "active": false
+      "active": true
     }
   ],
   "schedule": [
