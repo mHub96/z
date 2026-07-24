@@ -23,8 +23,8 @@
     },
     {
       "name": "د. علي محسن",
-      "phone": "+9647756274144",
       "spec": "NS",
+      "phone": "+9647756274144",
       "tag": "NS",
       "active": true
     }
@@ -36,5 +36,9 @@
       "name": "د. ORTHO2",
       "timestamp": "14:39"
     }
-  ]
+  ],
+  "passwords": {
+    "user": "12345",
+    "admin": "admin123"
+  }
 }
