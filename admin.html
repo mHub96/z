@@ -96,6 +96,18 @@
             background: #fef9c3;
             color: #854d0e;
         }
+        body.light .toast-success {
+            background: #10b981;
+            color: white;
+        }
+        body.light .toast-error {
+            background: #ef4444;
+            color: white;
+        }
+        body.light .toast-info {
+            background: #3b82f6;
+            color: white;
+        }
 
         /* ============================================================
            DARK THEME — BLACK, GREY, GOLD
@@ -298,6 +310,19 @@
         }
         body.dark .accent-amber-500 {
             accent-color: #d4af37 !important;
+        }
+
+        body.dark .toast-success {
+            background: #10b981;
+            color: white;
+        }
+        body.dark .toast-error {
+            background: #ef4444;
+            color: white;
+        }
+        body.dark .toast-info {
+            background: #3b82f6;
+            color: white;
         }
 
         /* ============================================================
@@ -613,9 +638,91 @@
             opacity: 0.4;
             text-align: center;
         }
+
+        /* ============================================================
+           TOAST NOTIFICATIONS
+        ============================================================ */
+        #toast-container {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            pointer-events: none;
+            width: 90%;
+            max-width: 420px;
+        }
+        .toast {
+            padding: 14px 24px;
+            border-radius: 1rem;
+            font-weight: 600;
+            font-size: 0.9rem;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+            transform: translateY(-20px);
+            opacity: 0;
+            transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+            pointer-events: auto;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            width: 100%;
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+        .toast.hide {
+            transform: translateY(-20px);
+            opacity: 0;
+        }
+        .toast i {
+            font-size: 1.1rem;
+            flex-shrink: 0;
+        }
+        .toast .toast-close {
+            margin-right: auto;
+            cursor: pointer;
+            opacity: 0.6;
+            transition: opacity 0.2s;
+            background: none;
+            border: none;
+            color: inherit;
+            font-size: 1rem;
+            padding: 0 4px;
+        }
+        .toast .toast-close:hover {
+            opacity: 1;
+        }
+        .toast-success {
+            background: rgba(16, 185, 129, 0.92);
+            color: white;
+            border-color: rgba(255, 255, 255, 0.15);
+        }
+        .toast-error {
+            background: rgba(239, 68, 68, 0.92);
+            color: white;
+            border-color: rgba(255, 255, 255, 0.15);
+        }
+        .toast-info {
+            background: rgba(59, 130, 246, 0.92);
+            color: white;
+            border-color: rgba(255, 255, 255, 0.15);
+        }
+        body.dark .toast-success { background: rgba(16, 185, 129, 0.92); }
+        body.dark .toast-error { background: rgba(239, 68, 68, 0.92); }
+        body.dark .toast-info { background: rgba(59, 130, 246, 0.92); }
     </style>
 </head>
 <body class="light" id="app-body">
+
+    <!-- TOAST CONTAINER -->
+    <div id="toast-container"></div>
 
     <!-- LOCK SCREEN -->
     <div id="lock-screen" class="lock-screen">
@@ -805,6 +912,38 @@
             { id: "OR", name: "Orthopaedics" }
         ];
 
+        // ========== TOAST SYSTEM ==========
+        function showToast(message, type = 'info', duration = 3000) {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            const icons = {
+                success: 'fa-check-circle',
+                error: 'fa-exclamation-circle',
+                info: 'fa-info-circle'
+            };
+            toast.className = `toast toast-${type}`;
+            toast.innerHTML = `
+                <i class="fas ${icons[type] || icons.info}"></i>
+                <span>${message}</span>
+                <button class="toast-close" onclick="this.parentElement.remove()">&times;</button>
+            `;
+            container.appendChild(toast);
+            
+            // Trigger show animation
+            requestAnimationFrame(() => {
+                toast.classList.add('show');
+            });
+            
+            // Auto remove after duration
+            setTimeout(() => {
+                toast.classList.remove('show');
+                toast.classList.add('hide');
+                setTimeout(() => {
+                    if (toast.parentElement) toast.remove();
+                }, 500);
+            }, duration);
+        }
+
         // ========== THEME ==========
         function toggleTheme() {
             document.getElementById('app-body').classList.toggle('light');
@@ -856,7 +995,6 @@
             err.innerText = '⏳ جاري التحقق...';
 
             try {
-                // Fetch data from GitHub
                 const res = await fetch(`https://api.github.com/repos/${CONFIG.user}/${CONFIG.repo}/contents/${CONFIG.path}?t=${Date.now()}`, {
                     headers: { "Authorization": `token ${GH_TOKEN}` }
                 });
@@ -866,11 +1004,9 @@
                     fileSha = data.sha;
                     const content = JSON.parse(decodeURIComponent(escape(atob(data.content.replace(/\s/g, '')))));
 
-                    // Get passwords from the database
                     const userPass = content.passwords?.user || null;
                     const adminPass = content.passwords?.admin || null;
 
-                    // Check if password matches
                     if (userPass && pwd === userPass) {
                         isAdmin = false;
                         err.innerText = '';
@@ -900,7 +1036,6 @@
         }
 
         function loginSuccess(content) {
-            // Load the data into db
             db.names = (content.names || []).map(item => ({
                 name: item.name || item[0] || "",
                 spec: item.spec || item[1] || "NS",
@@ -911,7 +1046,6 @@
             db.schedule = content.schedule || [];
             db.passwords = content.passwords || {};
 
-            // Hide lock screen and show main content
             document.getElementById('lock-screen').style.display = 'none';
             document.getElementById('main-content').classList.remove('hidden-content');
 
@@ -919,7 +1053,6 @@
                 document.getElementById('admin-panel-btn').classList.remove('hidden');
             }
 
-            // Save remember me token
             if (document.getElementById('remember-me').checked) {
                 const pwd = document.getElementById('password-input').value;
                 localStorage.setItem('rememberToken', btoa(pwd));
@@ -929,17 +1062,16 @@
 
             renderResidents();
             isDataLoaded = true;
+            showToast('تم تسجيل الدخول بنجاح', 'success');
         }
 
         // ========== AUTO-LOGIN ==========
-        // Run immediately when the page loads
         (function() {
             const token = localStorage.getItem('rememberToken');
             if (token && !isAutoLoginAttempted) {
                 isAutoLoginAttempted = true;
                 try {
                     const pwd = atob(token);
-                    // Auto-login by fetching passwords from database
                     performAutoLogin(pwd);
                 } catch (e) {
                     console.error("Auto-login error:", e);
@@ -963,7 +1095,6 @@
 
                     if ((userPass && pwd === userPass) || (adminPass && pwd === adminPass)) {
                         isAdmin = (adminPass && pwd === adminPass);
-                        // Immediately hide lock screen and show content
                         document.getElementById('lock-screen').style.display = 'none';
                         document.getElementById('main-content').classList.remove('hidden-content');
                         if (isAdmin) {
@@ -976,7 +1107,6 @@
             } catch (e) {
                 console.error("Auto-login load error:", e);
             }
-            // If auto-login fails, show the lock screen
             document.getElementById('lock-screen').style.display = 'flex';
             const input = document.getElementById('password-input');
             if (input) input.focus();
@@ -998,18 +1128,16 @@
             const u = document.getElementById('admin-pass-user').value.trim();
             const a = document.getElementById('admin-pass-admin').value.trim();
             if (u.length < 3 || a.length < 3) {
-                alert('كلمة المرور يجب أن تكون 3 أحرف على الأقل');
+                showToast('كلمة المرور يجب أن تكون 3 أحرف على الأقل', 'error');
                 return;
             }
 
-            // Update passwords in db
             db.passwords = { user: u, admin: a };
-            alert('تم تحديث كلمات المرور بنجاح');
+            showToast('تم تحديث كلمات المرور بنجاح', 'success');
 
             if (document.getElementById('remember-me').checked) {
                 localStorage.setItem('rememberToken', btoa(u));
             }
-            // Save to GitHub immediately
             saveToGithub();
         }
 
@@ -1147,6 +1275,7 @@
             closeModal();
             renderResidents();
             await saveToGithub();
+            showToast('تم تعديل بيانات المقيم بنجاح', 'success');
         }
 
         async function deleteResident(idx) {
@@ -1154,6 +1283,7 @@
             db.names.splice(idx, 1);
             renderResidents();
             await saveToGithub();
+            showToast('تم حذف المقيم بنجاح', 'success');
         }
 
         async function addResident() {
@@ -1161,7 +1291,10 @@
             const phoneEl = document.getElementById('new-phone');
             const specEl = document.getElementById('new-spec');
             const activeEl = document.getElementById('new-active');
-            if (!nameEl.value.trim()) return;
+            if (!nameEl.value.trim()) {
+                showToast('الرجاء إدخال اسم المقيم', 'error');
+                return;
+            }
 
             const isActive = activeEl.checked;
             db.names.push({
@@ -1175,6 +1308,7 @@
             phoneEl.value = "";
             renderResidents();
             await saveToGithub();
+            showToast('تم إضافة المقيم بنجاح', 'success');
         }
 
         // ========== SAVE ==========
@@ -1185,7 +1319,6 @@
             btn.classList.add('loading');
 
             try {
-                // Always include passwords in the save
                 db.passwords = db.passwords || {};
 
                 const body = {
@@ -1208,6 +1341,7 @@
                     fileSha = updated.content.sha;
                     btn.innerHTML = '<i class="fas fa-check-circle"></i> تم';
                     btn.classList.replace('loading', 'success');
+                    showToast('تم حفظ البيانات بنجاح', 'success');
                 } else {
                     throw new Error(await res.text());
                 }
@@ -1215,6 +1349,7 @@
                 console.error("Save error:", e);
                 btn.innerHTML = '<i class="fas fa-exclamation-triangle"></i> فشل';
                 btn.classList.replace('loading', 'error');
+                showToast('فشل حفظ البيانات', 'error');
             }
             setTimeout(() => {
                 btn.disabled = false;
@@ -1232,7 +1367,6 @@
             if (e.key === 'Enter') addResident();
         });
 
-        // ========== HANDLE REMEMBER ME CHECKBOX CHANGE ==========
         document.getElementById('remember-me').addEventListener('change', function() {
             if (!this.checked) {
                 localStorage.removeItem('rememberToken');
