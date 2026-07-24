@@ -3,22 +3,30 @@
     {
       "name": "د. ORTHO",
       "spec": "OR",
-      "phone": "+9647801234567"
+      "phone": "+9647801234567",
+      "tag": "OR",
+      "active": true
     },
     {
       "name": "د. ORTHO2",
       "spec": "OR",
-      "phone": "+9647806594325"
+      "phone": "+9647806594325",
+      "tag": "OR",
+      "active": true
     },
     {
       "name": "د. Reserve01",
       "spec": "RESERVE",
-      "phone": "+9647805496351"
+      "phone": "+9647805496351",
+      "tag": "RESERVE",
+      "active": false
     },
     {
       "name": "د. علي محسن",
-      "spec": "NS",
-      "phone": "+9647756274144"
+      "phone": "+9647756274144",
+      "spec": "RESERVE",
+      "tag": "NS",
+      "active": false
     }
   ],
   "schedule": [
