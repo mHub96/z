@@ -1,4 +1,8 @@
 {
+  "passwords": {
+    "user": "12345",
+    "admin": "123"
+  },
   "names": [
     {
       "name": "د. ORTHO",
@@ -36,9 +40,5 @@
       "name": "د. ORTHO2",
       "timestamp": "14:39"
     }
-  ],
-  "passwords": {
-    "user": "12345",
-    "admin": "123"
-  }
+  ]
 }
