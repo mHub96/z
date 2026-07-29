@@ -84,29 +84,30 @@
         body.light .modal-card {
             background: #ffffff;
         }
+        
+        /* LIGHT THEME BADGES - High contrast */
         body.light .badge-spec {
-            background: #eef2ff;
-            color: #2563eb;
+            background: #dbeafe;
+            color: #1e40af;
+            font-weight: 700;
         }
         body.light .badge-active {
-            background: #dcfce7;
-            color: #166534;
+            background: #d1fae5;
+            color: #065f46;
+            font-weight: 700;
         }
         body.light .badge-reserve {
-            background: #fef9c3;
-            color: #854d0e;
+            background: #fef3c7;
+            color: #92400e;
+            font-weight: 700;
         }
-        body.light .toast-success {
-            background: #10b981;
-            color: white;
+        body.light .spec-count {
+            background: #dbeafe;
+            color: #1e40af;
         }
-        body.light .toast-error {
-            background: #ef4444;
-            color: white;
-        }
-        body.light .toast-info {
-            background: #3b82f6;
-            color: white;
+        body.light .spec-count-reserve {
+            background: #fef3c7;
+            color: #92400e;
         }
 
         /* ============================================================
@@ -158,9 +159,30 @@
         body.dark .spec-header:hover {
             background: rgba(30, 40, 60, 0.6);
         }
-        body.dark .spec-header .bg-blue-100 {
-            background: rgba(212, 175, 55, 0.15) !important;
-            color: #d4af37 !important;
+        
+        /* DARK THEME BADGES - High contrast */
+        body.dark .badge-spec {
+            background: rgba(212, 175, 55, 0.15);
+            color: #d4af37;
+            font-weight: 700;
+        }
+        body.dark .badge-active {
+            background: rgba(16, 185, 129, 0.15);
+            color: #6ee7b7;
+            font-weight: 700;
+        }
+        body.dark .badge-reserve {
+            background: rgba(251, 191, 36, 0.12);
+            color: #fbbf24;
+            font-weight: 700;
+        }
+        body.dark .spec-count {
+            background: rgba(212, 175, 55, 0.15);
+            color: #d4af37;
+        }
+        body.dark .spec-count-reserve {
+            background: rgba(251, 191, 36, 0.12);
+            color: #fbbf24;
         }
 
         body.dark .resident-card {
@@ -211,19 +233,6 @@
         body.dark .modal-card {
             background: #141c2a;
             border: 1px solid rgba(212, 175, 55, 0.08);
-        }
-
-        body.dark .badge-spec {
-            background: rgba(212, 175, 55, 0.12);
-            color: #d4af37;
-        }
-        body.dark .badge-active {
-            background: rgba(16, 185, 129, 0.15);
-            color: #6ee7b7;
-        }
-        body.dark .badge-reserve {
-            background: rgba(212, 175, 55, 0.10);
-            color: #fbbf24;
         }
 
         body.dark .btn-gradient {
@@ -431,6 +440,15 @@
         .badge-reserve {
             font-size: 0.6rem;
             padding: 0.15rem 0.7rem;
+            border-radius: 100px;
+            font-weight: 700;
+            display: inline-block;
+        }
+
+        .spec-count,
+        .spec-count-reserve {
+            font-size: 0.7rem;
+            padding: 0.1rem 0.7rem;
             border-radius: 100px;
             font-weight: 700;
             display: inline-block;
@@ -899,6 +917,7 @@
         let isAdmin = false;
         let isDataLoaded = false;
         let isAutoLoginAttempted = false;
+        let isLockScreenHidden = false;
 
         const specialties = [
             { id: "NS", name: "Neurosurgery" },
@@ -929,12 +948,10 @@
             `;
             container.appendChild(toast);
             
-            // Trigger show animation
             requestAnimationFrame(() => {
                 toast.classList.add('show');
             });
             
-            // Auto remove after duration
             setTimeout(() => {
                 toast.classList.remove('show');
                 toast.classList.add('hide');
@@ -957,16 +974,6 @@
             document.getElementById('app-body').classList.remove('light');
             document.getElementById('app-body').classList.add('dark');
         }
-
-        // ========== SET FOCUS ON PASSWORD FIELD ==========
-        document.addEventListener('DOMContentLoaded', function() {
-            const passwordInput = document.getElementById('password-input');
-            if (passwordInput) {
-                setTimeout(function() {
-                    passwordInput.focus();
-                }, 300);
-            }
-        });
 
         // ========== ENTER KEY ==========
         document.addEventListener('keydown', function(e) {
@@ -1046,7 +1053,9 @@
             db.schedule = content.schedule || [];
             db.passwords = content.passwords || {};
 
+            // Hide lock screen immediately
             document.getElementById('lock-screen').style.display = 'none';
+            isLockScreenHidden = true;
             document.getElementById('main-content').classList.remove('hidden-content');
 
             if (isAdmin) {
@@ -1056,8 +1065,10 @@
             if (document.getElementById('remember-me').checked) {
                 const pwd = document.getElementById('password-input').value;
                 localStorage.setItem('rememberToken', btoa(pwd));
+                localStorage.setItem('rememberMe', 'true');
             } else {
                 localStorage.removeItem('rememberToken');
+                localStorage.removeItem('rememberMe');
             }
 
             renderResidents();
@@ -1065,10 +1076,13 @@
             showToast('تم تسجيل الدخول بنجاح', 'success');
         }
 
-        // ========== AUTO-LOGIN ==========
+        // ========== AUTO-LOGIN - FIXED ==========
         (function() {
             const token = localStorage.getItem('rememberToken');
-            if (token && !isAutoLoginAttempted) {
+            const rememberMe = localStorage.getItem('rememberMe');
+            
+            // Only attempt auto-login if rememberMe is explicitly set to 'true'
+            if (token && rememberMe === 'true' && !isAutoLoginAttempted) {
                 isAutoLoginAttempted = true;
                 try {
                     const pwd = atob(token);
@@ -1076,6 +1090,9 @@
                 } catch (e) {
                     console.error("Auto-login error:", e);
                 }
+            } else if (rememberMe !== 'true') {
+                // If rememberMe is not set, clear any stale token
+                localStorage.removeItem('rememberToken');
             }
         })();
 
@@ -1095,7 +1112,9 @@
 
                     if ((userPass && pwd === userPass) || (adminPass && pwd === adminPass)) {
                         isAdmin = (adminPass && pwd === adminPass);
+                        // Hide lock screen immediately - no flash
                         document.getElementById('lock-screen').style.display = 'none';
+                        isLockScreenHidden = true;
                         document.getElementById('main-content').classList.remove('hidden-content');
                         if (isAdmin) {
                             document.getElementById('admin-panel-btn').classList.remove('hidden');
@@ -1107,7 +1126,9 @@
             } catch (e) {
                 console.error("Auto-login load error:", e);
             }
+            // If auto-login fails, show lock screen
             document.getElementById('lock-screen').style.display = 'flex';
+            isLockScreenHidden = false;
             const input = document.getElementById('password-input');
             if (input) input.focus();
         }
@@ -1137,6 +1158,7 @@
 
             if (document.getElementById('remember-me').checked) {
                 localStorage.setItem('rememberToken', btoa(u));
+                localStorage.setItem('rememberMe', 'true');
             }
             saveToGithub();
         }
@@ -1160,7 +1182,7 @@
                 section.innerHTML = `
                         <div class="spec-header" onclick="toggleSection('${spec.id}')">
                             <span><i class="fas fa-chevron-down text-[10px] ml-2 opacity-40"></i> ${spec.name}</span>
-                            <span class="bg-blue-100 dark:bg-amber-950/30 text-blue-700 dark:text-amber-400 px-3 py-0.5 rounded-full text-[11px] font-bold">${residents.length}</span>
+                            <span class="spec-count px-3 py-0.5 rounded-full text-[11px]">${residents.length}</span>
                         </div>
                         <div id="content-${spec.id}" class="spec-content ${isExpanded}">
                             ${residents.map((r) => {
@@ -1192,7 +1214,7 @@
                 reserveSection.innerHTML = `
                         <div class="spec-header" onclick="toggleSection('reserve')">
                             <span><i class="fas fa-chevron-down text-[10px] ml-2 opacity-40"></i> 📋 الاحتياط (Reserve)</span>
-                            <span class="bg-amber-100 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 px-3 py-0.5 rounded-full text-[11px] font-bold">${reserveRes.length}</span>
+                            <span class="spec-count-reserve px-3 py-0.5 rounded-full text-[11px]">${reserveRes.length}</span>
                         </div>
                         <div id="content-reserve" class="spec-content ${isExpanded}">
                             ${reserveRes.map((r) => {
@@ -1370,7 +1392,27 @@
         document.getElementById('remember-me').addEventListener('change', function() {
             if (!this.checked) {
                 localStorage.removeItem('rememberToken');
+                localStorage.removeItem('rememberMe');
+            } else {
+                // If checked, we'll save the token on next login
+                const pwd = document.getElementById('password-input').value;
+                if (pwd) {
+                    localStorage.setItem('rememberToken', btoa(pwd));
+                    localStorage.setItem('rememberMe', 'true');
+                }
             }
+        });
+
+        // Set focus on password field if lock screen is visible
+        document.addEventListener('DOMContentLoaded', function() {
+            // Check if lock screen is visible (not hidden by auto-login)
+            setTimeout(function() {
+                const lockScreen = document.getElementById('lock-screen');
+                if (lockScreen && lockScreen.style.display !== 'none') {
+                    const passwordInput = document.getElementById('password-input');
+                    if (passwordInput) passwordInput.focus();
+                }
+            }, 100);
         });
     </script>
 </body>
