@@ -109,6 +109,16 @@
             background: #fef3c7;
             color: #92400e;
         }
+        
+        /* LIGHT THEME - Main counter badge */
+        body.light .counter-badge {
+            background: #dbeafe;
+            color: #1e40af;
+            border-color: #bfdbfe;
+        }
+        body.light .counter-badge i {
+            color: #3b82f6;
+        }
 
         /* ============================================================
            DARK THEME — BLACK, GREY, GOLD
@@ -183,6 +193,16 @@
         body.dark .spec-count-reserve {
             background: rgba(251, 191, 36, 0.12);
             color: #fbbf24;
+        }
+        
+        /* DARK THEME - Main counter badge */
+        body.dark .counter-badge {
+            background: rgba(212, 175, 55, 0.12);
+            color: #d4af37;
+            border-color: rgba(212, 175, 55, 0.15);
+        }
+        body.dark .counter-badge i {
+            color: #d4af37;
         }
 
         body.dark .resident-card {
@@ -452,6 +472,17 @@
             border-radius: 100px;
             font-weight: 700;
             display: inline-block;
+        }
+
+        /* Main counter badge - theme aware */
+        .counter-badge {
+            font-size: 0.65rem;
+            padding: 0.3rem 0.9rem;
+            border-radius: 100px;
+            font-weight: 700;
+            display: inline-block;
+            border: 1px solid;
+            transition: all 0.3s ease;
         }
 
         .modal-overlay {
@@ -781,7 +812,8 @@
                     </span>
                     المقيمين
                 </h1>
-                <p id="count-tag" class="text-xs font-bold text-blue-600 dark:text-amber-400 bg-blue-50 dark:bg-amber-950/30 px-4 py-1.5 rounded-full inline-block mt-2 border border-blue-100 dark:border-amber-900/30">
+                <!-- COUNTER BADGE - Now theme-aware with counter-badge class -->
+                <p id="count-tag" class="counter-badge mt-2">
                     <i class="fas fa-users mr-1"></i> جاري التحميل...
                 </p>
             </div>
